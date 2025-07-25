@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import plotly.graph_objects as go 
 import re
 
 def wczytaj_dane_magnetometru(nazwa_pliku: str) -> np.ndarray | None:
@@ -82,12 +85,67 @@ def dopasuj_sfere(points: np.ndarray) -> dict:
         "promien": promien
     }
 
+def przesun_punkty(punkty: np.ndarray, offset: np.array) -> None:
+    for punkt in punkty:
+        punkt -= offset
+    
+    return punkty
+
+def wykres_3D(dane: np.ndarray) -> None:
+    x_data: list[np.float64] = [punkt[0] for punkt in dane]
+    y_data: list[np.float64] = [punkt[1] for punkt in dane]
+    z_data: list[np.float64] = [punkt[2] for punkt in dane]
+    
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(x_data, y_data, z_data, c='b', marker=',')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z') 
+    
+    plt.savefig("3d.png")
+    
+def wykres_3D_interactive(dane: np.ndarray, promien: float) -> None:
+    # a scatter plot for the data points
+    scatter = go.Scatter3d(
+        x=dane[:,0], y=dane[:,1], z=dane[:,2],
+        mode='markers',
+        marker=dict(size=4, color=dane[:,2], colorscale='Viridis', opacity=0.8),
+        name='Pomiary'
+    )
+
+    # create sphere vertices
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
+    x_s = promien * np.outer(np.cos(u), np.sin(v))
+    y_s = promien * np.outer(np.sin(u), np.sin(v))
+    z_s = promien * np.outer(np.ones(np.size(u)), np.cos(v))
+
+    sphere = go.Surface(
+        x=x_s, y=y_s, z=z_s,
+        colorscale=[[0, 'red'], [1, 'red']],
+        opacity=0.3,
+        showscale=False,
+        name='Dopasowana sfera'
+    )
+
+    fig = go.Figure(data=[scatter, sphere])
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='X',
+            yaxis_title='Y',
+            zaxis_title='Z'
+        ),
+        width=800,
+        height=800,
+        margin=dict(l=0, r=0, b=0, t=0)
+    )
+    fig.show()
 
 dane = wczytaj_dane_magnetometru("data.txt")
-
 wyniki = dopasuj_sfere(dane)
 
-print(f"OFFSET X {wyniki["offset_x"]}")
-print(f"OFFSET Y {wyniki["offset_y"]}")
-print(f"OFFSET Z {wyniki["offset_z"]}")
-print(f"R {wyniki["promien"]}")
+print(wyniki["offset_x"])
+print(wyniki["offset_y"])
+print(wyniki["offset_z"])
+print(wyniki["promien"])
